@@ -1,0 +1,36 @@
+ZAMIK - bit-transparent time shift (Audio Unit + VST3, macOS 11 or later, Apple silicon and Intel)
+
+Install (no installer needed)
+1. Copy Zamik.component  to  ~/Library/Audio/Plug-Ins/Components/
+   Copy Zamik.vst3       to  ~/Library/Audio/Plug-Ins/VST3/
+   (In Finder: Go > Go to Folder..., paste the path. Create the folder if it is missing.)
+
+2. This build is not signed by a registered Apple developer, so macOS blocks it until you
+   clear the download flag once. Open Terminal and paste:
+
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/Zamik.component ~/Library/Audio/Plug-Ins/VST3/Zamik.vst3
+
+3. Restart your DAW and rescan plugins.
+   - Logic Pro: Zamik is under Audio Units > Zamik Audio > Zamik.
+     If it does not show up: Settings > Plug-in Manager > Reset & Rescan Selection.
+   - Ableton Live, Reaper, Bitwig, Cubase: use the VST3 or AU version.
+
+Zamik.app is a standalone version for trying it without a DAW.
+
+Windows: copy Zamik.vst3 to C:\Program Files\Common Files\VST3\
+
+Using it
+- EARLIER / LATER move the audio. Hold a button to repeat.
+- MS, SMP and NOTE choose the step: milliseconds, samples, or tempo-synced note divisions.
+- DUAL gives each channel (L/R or M/S) its own display. SYNC locks the gap between them.
+- A B C D store four variations to compare.
+- ADVANCE RANGE sets how far audio can move earlier. Zamik reports this much latency and the
+  DAW compensates for it, so keep it as small as you need.
+- BIT-TRANSPARENT is lit whenever the audio is only being moved. It goes out only for M/S with
+  different mid and side offsets or a balance away from center.
+
+Keys (click the plugin window first): left/right move, Shift + left/right move the lower row,
+0 zero, M cycle modes, A-D variations.
+
+Updating: replace the old Zamik.component / Zamik.vst3 with the new ones and run the Terminal
+command in step 2 again (each download is flagged again by macOS).

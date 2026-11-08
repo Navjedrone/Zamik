@@ -1,0 +1,128 @@
+name: Build Zamik (macOS AU + VST3)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja || true
+
+      - name: "Configure (universal: Apple silicon + Intel)"
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --target Zamik_AU Zamik_VST3 Zamik_Standalone ZamikTests -j 4
+
+      - name: Bit-transparency tests
+        run: ./build/ZamikTests_artefacts/Release/ZamikTests
+
+      - name: Sign (ad hoc)
+        run: |
+          A=build/Zamik_artefacts/Release
+          codesign --force --deep --sign - "$A/AU/Zamik.component"
+          codesign --force --deep --sign - "$A/VST3/Zamik.vst3"
+          codesign --force --deep --sign - "$A/Standalone/Zamik.app"
+
+      - name: Validate the Audio Unit with auval
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/Zamik_artefacts/Release/AU/Zamik.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -a | grep -i zmk || true
+          auval -strict -v aufx Zmk1 Zmka
+
+      - name: Validate with pluginval (VST3 and AU)
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
+          unzip -q pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate-in-process --skip-gui-tests build/Zamik_artefacts/Release/VST3/Zamik.vst3
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate-in-process --skip-gui-tests ~/Library/Audio/Plug-Ins/Components/Zamik.component
+
+      - name: Open the plugin window (pluginval interface tests)
+        continue-on-error: true
+        run: ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate-in-process build/Zamik_artefacts/Release/VST3/Zamik.vst3
+
+      - name: Interface snapshots
+        continue-on-error: true
+        run: |
+          mkdir -p ui
+          ./build/ZamikTests_artefacts/Release/ZamikTests ui
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-snapshots
+          path: ui/*.png
+          if-no-files-found: ignore
+
+      - name: Package
+        run: |
+          A=build/Zamik_artefacts/Release
+          mkdir -p dist/Zamik
+          cp -R "$A/AU/Zamik.component" "$A/VST3/Zamik.vst3" "$A/Standalone/Zamik.app" dist/Zamik/
+          cp INSTALL.txt dist/Zamik/
+          cd dist && ditto -c -k --keepParent Zamik Zamik-macOS.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zamik-macOS
+          path: dist/Zamik-macOS.zip
+
+      - name: Attach the zip to the release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Zamik-macOS.zip
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --target Zamik_VST3 ZamikTests --parallel
+
+      - name: Bit-transparency tests
+        run: ./build/ZamikTests_artefacts/Release/ZamikTests.exe
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/Zamik | Out-Null
+          Copy-Item -Recurse build/Zamik_artefacts/Release/VST3/Zamik.vst3 dist/Zamik/
+          Copy-Item INSTALL.txt dist/Zamik/
+          Compress-Archive -Path dist/Zamik -DestinationPath dist/Zamik-Windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zamik-Windows
+          path: dist/Zamik-Windows.zip
+
+      - name: Attach the zip to the release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Zamik-Windows.zip
