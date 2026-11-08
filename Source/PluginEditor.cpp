@@ -17,7 +17,7 @@ namespace
     std::vector<Tube> msTubes (double ms)
     {
         std::vector<Tube> out;
-        out.push_back ({ ms > 0 ? '+' : ms < 0 ? '-' : ' ', std::abs (ms) >= 0.0005 });
+        out.push_back ({ (juce::juce_wchar) (ms > 0 ? '+' : ms < 0 ? '-' : ' '), std::abs (ms) >= 0.0005 });
         auto txt = juce::String (std::abs (ms), 3);
         auto ip = txt.upToFirstOccurrenceOf (".", false, false).paddedLeft ('0', 5);
         auto fp = txt.fromFirstOccurrenceOf (".", false, false).paddedRight ('0', 3).substring (0, 3);
@@ -34,7 +34,7 @@ namespace
     std::vector<Tube> smpTubes (juce::int64 v)
     {
         std::vector<Tube> out;
-        out.push_back ({ v > 0 ? '+' : v < 0 ? '-' : ' ', v != 0 });
+        out.push_back ({ (juce::juce_wchar) (v > 0 ? '+' : v < 0 ? '-' : ' '), v != 0 });
         auto s = juce::String (std::abs (v)).paddedLeft ('0', 8).getLastCharacters (8);
         bool lead = true;
         for (int i = 0; i < 8; ++i)
@@ -48,7 +48,7 @@ namespace
     std::vector<Tube> noteTubes (int ticks)
     {
         std::vector<Tube> out;
-        out.push_back ({ ticks > 0 ? '+' : ticks < 0 ? '-' : ' ', ticks != 0 });
+        out.push_back ({ (juce::juce_wchar) (ticks > 0 ? '+' : ticks < 0 ? '-' : ' '), ticks != 0 });
         juce::String s ("0");
         if (ticks != 0)
         {
