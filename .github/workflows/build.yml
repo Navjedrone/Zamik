@@ -59,6 +59,7 @@ jobs:
           done
           exit $fail
 
+      - name: Sign (ad hoc)
         run: |
           A=build/Zamik_artefacts/Release
           codesign --force --deep --sign - "$A/AU/Zamik.component"
@@ -127,7 +128,7 @@ jobs:
           set -e
           rm -rf ~/Library/Audio/Plug-Ins/Components/Zamik.component ~/Library/Audio/Plug-Ins/VST3/Zamik.vst3
           # pretend it was downloaded, as it will be for your friends
-          xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" dist/Zamik-Installer.pkg
+          xattr -w com.apple.quarantine "0081;$(printf %x "$(date +%s)");Safari;" dist/Zamik-Installer.pkg
           sudo installer -pkg dist/Zamik-Installer.pkg -target /
           ls -la /Library/Audio/Plug-Ins/Components/Zamik.component /Library/Audio/Plug-Ins/VST3/Zamik.vst3
           for p in /Library/Audio/Plug-Ins/Components/Zamik.component /Library/Audio/Plug-Ins/VST3/Zamik.vst3; do
