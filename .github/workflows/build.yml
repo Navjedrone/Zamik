@@ -107,11 +107,21 @@ jobs:
           mkdir -p pkgroot/au pkgroot/vst3 pkgs res dist
           cp -R "$A/AU/Zamik.component" pkgroot/au/
           cp -R "$A/VST3/Zamik.vst3" pkgroot/vst3/
-          for k in au vst3; do
-            pkgbuild --analyze --root pkgroot/$k comp-$k.plist
-            # install exactly where we say, never into another copy found elsewhere on the disk
-            /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" comp-$k.plist
-            /usr/libexec/PlistBuddy -c "Set :0:BundleOverwriteAction upgrade" comp-$k.plist || true
+          # Install exactly where we say, never into another copy found elsewhere on the disk,
+          # and always replace an existing Zamik, whatever its version.
+          for k in au:Zamik.component vst3:Zamik.vst3; do
+            name=${k%%:*}; bundle=${k#*:}
+            printf '%s\n' \
+              '<?xml version="1.0" encoding="UTF-8"?>' \
+              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+              '<plist version="1.0"><array><dict>' \
+              '<key>BundleHasStrictIdentifier</key><true/>' \
+              '<key>BundleIsRelocatable</key><false/>' \
+              '<key>BundleIsVersionChecked</key><false/>' \
+              '<key>BundleOverwriteAction</key><string>upgrade</string>' \
+              "<key>RootRelativeBundlePath</key><string>$bundle</string>" \
+              '</dict></array></plist>' > "comp-$name.plist"
+            plutil -lint "comp-$name.plist"
           done
           pkgbuild --root pkgroot/au --component-plist comp-au.plist --identifier com.zamikaudio.zamik.au \
                    --version "$VER" --install-location /Library/Audio/Plug-Ins/Components \
