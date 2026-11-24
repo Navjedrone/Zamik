@@ -6,11 +6,22 @@ developer. That happens only once, and only for the installer. The plugins it in
 work straight away, with no Terminal commands.
 
 macOS 15 Sequoia and newer
-  1. Double-click Zamik-Installer.pkg. When macOS warns you, click Done.
-  2. Open System Settings > Privacy & Security.
-  3. Scroll down to Security. Next to the message about Zamik-Installer.pkg,
-     click Open Anyway, then enter your password.
-  4. The installer opens. Click Continue through the steps and Install.
+  1. Double-click Zamik-Installer.pkg.
+     macOS shows: "Zamik-Installer.pkg" Not Opened - Apple could not verify
+     "Zamik-Installer.pkg" is free of malware...
+     Click Done. (Do NOT click Move to Bin.)
+  2. Open the Apple menu (top left) > System Settings.
+  3. Click Privacy & Security in the sidebar.
+  4. Scroll down to the Security section. You will see:
+     "Zamik-Installer.pkg" was blocked to protect your Mac.
+     Click Open Anyway next to it.
+  5. Click Open Anyway again in the box that appears, then enter your Mac password
+     (or use Touch ID).
+  6. The installer opens. Click Continue through the steps, then Install.
+
+  No Open Anyway button? It only appears for about an hour after the warning.
+  Double-click Zamik-Installer.pkg again, click Done, and go back to
+  Privacy & Security.
 
 macOS 10.13 High Sierra to macOS 14 Sonoma
   1. Right-click (or Control-click) Zamik-Installer.pkg and choose Open.
