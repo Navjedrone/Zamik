@@ -1,4 +1,4 @@
-ZAMIK - bit-transparent time shift (Audio Unit + VST3, macOS 11 or later, Apple silicon and Intel)
+ZAMIK - bit-transparent time shift (Audio Unit + VST3, macOS 10.13 High Sierra or later, Apple silicon and Intel)
 
 Install (no installer needed)
 1. Copy Zamik.component  to  ~/Library/Audio/Plug-Ins/Components/

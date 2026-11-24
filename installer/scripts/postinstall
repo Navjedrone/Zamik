@@ -1,0 +1,4 @@
+#!/bin/sh
+# Make macOS re-read the installed Audio Units, so hosts see Zamik without a restart of the Mac.
+/usr/bin/killall -9 AudioComponentRegistrar >/dev/null 2>&1 || true
+exit 0

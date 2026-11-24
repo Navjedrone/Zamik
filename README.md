@@ -4,7 +4,12 @@ Zamik moves audio earlier or later in time, by whole samples, and does nothing e
 Samples are copied to new positions: no gain, interpolation, dither, fades or resampling.
 On the normal path the output is bit-identical to the input, only shifted.
 
-Formats: AU and VST3 on macOS (Apple Silicon and Intel), VST3 on Windows, plus a standalone app.
+Formats: AU and VST3 on macOS 10.13 High Sierra and later (Apple Silicon and Intel), VST3 on Windows, plus a standalone app.
+
+The easiest way to install on a Mac is `Zamik-Installer.pkg` (in the Zamik-Installer-macOS download). It installs
+the AU and VST3 into `/Library/Audio/Plug-Ins/` for all users, with no Terminal commands. Because it is not
+signed with a paid Apple developer certificate, macOS asks once before opening it; `How to open the installer.txt`
+next to it explains the steps.
 
 ## Using it
 

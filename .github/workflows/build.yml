@@ -14,20 +14,26 @@ permissions:
 
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
+      - name: Use Xcode 16 (the newest that still builds for macOS 10.13)
+        run: |
+          X=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$X" ]; then sudo xcode-select -s "$X"; fi
+          xcodebuild -version
+
       - name: Install Ninja
         run: brew install ninja || true
 
-      - name: "Configure (universal: Apple silicon + Intel)"
+      - name: "Configure (universal: Apple silicon + Intel, macOS 10.13 High Sierra and later)"
         run: >
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 
       - name: Build
         run: cmake --build build --target Zamik_AU Zamik_VST3 Zamik_Standalone ZamikTests -j 4
@@ -35,7 +41,24 @@ jobs:
       - name: Bit-transparency tests
         run: ./build/ZamikTests_artefacts/Release/ZamikTests
 
-      - name: Sign (ad hoc)
+      - name: Check High Sierra compatibility (Intel part must say macOS 10.13)
+        run: |
+          A=build/Zamik_artefacts/Release
+          fail=0
+          for bin in "$A/AU/Zamik.component/Contents/MacOS/Zamik" "$A/VST3/Zamik.vst3/Contents/MacOS/Zamik" "$A/Standalone/Zamik.app/Contents/MacOS/Zamik"; do
+            echo "== $bin"
+            lipo -info "$bin"
+            v=$(otool -arch x86_64 -l "$bin" | awk '/LC_VERSION_MIN_MACOSX/{f=1} /LC_BUILD_VERSION/{f=2} f==1&&/version/{print $2; exit} f==2&&/minos/{print $2; exit}')
+            echo "x86_64 minimum macOS: $v"
+            [ "$v" = "10.13" ] || fail=1
+          done
+          for plist in "$A/AU/Zamik.component/Contents/Info.plist" "$A/VST3/Zamik.vst3/Contents/Info.plist"; do
+            m=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$plist" 2>/dev/null || echo "not set")
+            echo "$plist LSMinimumSystemVersion: $m"
+            case "$m" in 10.13*|"not set") ;; *) fail=1 ;; esac
+          done
+          exit $fail
+
         run: |
           A=build/Zamik_artefacts/Release
           codesign --force --deep --sign - "$A/AU/Zamik.component"
@@ -74,9 +97,52 @@ jobs:
           path: ui/*.png
           if-no-files-found: ignore
 
+      - name: Build the installer (.pkg)
+        run: |
+          set -e
+          A=build/Zamik_artefacts/Release
+          VER=$(sed -n 's/^project(Zamik VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          echo "version $VER"
+          mkdir -p pkgroot/au pkgroot/vst3 pkgs res dist
+          cp -R "$A/AU/Zamik.component" pkgroot/au/
+          cp -R "$A/VST3/Zamik.vst3" pkgroot/vst3/
+          for k in au vst3; do
+            pkgbuild --analyze --root pkgroot/$k comp-$k.plist
+            # install exactly where we say, never into another copy found elsewhere on the disk
+            /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" comp-$k.plist
+            /usr/libexec/PlistBuddy -c "Set :0:BundleOverwriteAction upgrade" comp-$k.plist || true
+          done
+          pkgbuild --root pkgroot/au --component-plist comp-au.plist --identifier com.zamikaudio.zamik.au \
+                   --version "$VER" --install-location /Library/Audio/Plug-Ins/Components \
+                   --scripts installer/scripts pkgs/Zamik-AU.pkg
+          pkgbuild --root pkgroot/vst3 --component-plist comp-vst3.plist --identifier com.zamikaudio.zamik.vst3 \
+                   --version "$VER" --install-location /Library/Audio/Plug-Ins/VST3 pkgs/Zamik-VST3.pkg
+          sed "s/__VERSION__/$VER/g" installer/distribution.xml > distribution.xml
+          for f in installer/resources/*.html; do sed "s/__VERSION__/$VER/g" "$f" > "res/$(basename "$f")"; done
+          productbuild --distribution distribution.xml --resources res --package-path pkgs dist/Zamik-Installer.pkg
+          pkgutil --payload-files dist/Zamik-Installer.pkg | grep -E "Zamik\.(component|vst3)/Contents/MacOS/Zamik$"
+
+      - name: Test the installer on this Mac
+        run: |
+          set -e
+          rm -rf ~/Library/Audio/Plug-Ins/Components/Zamik.component ~/Library/Audio/Plug-Ins/VST3/Zamik.vst3
+          # pretend it was downloaded, as it will be for your friends
+          xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" dist/Zamik-Installer.pkg
+          sudo installer -pkg dist/Zamik-Installer.pkg -target /
+          ls -la /Library/Audio/Plug-Ins/Components/Zamik.component /Library/Audio/Plug-Ins/VST3/Zamik.vst3
+          for p in /Library/Audio/Plug-Ins/Components/Zamik.component /Library/Audio/Plug-Ins/VST3/Zamik.vst3; do
+            if xattr -r "$p" | grep -q quarantine; then echo "QUARANTINED: $p"; exit 1; else echo "not quarantined: $p"; fi
+            codesign --verify --deep --strict "$p" && echo "signature ok: $p"
+          done
+          killall -9 AudioComponentRegistrar || true
+          auval -strict -v aufx Zmk1 Zmka
+
       - name: Package
         run: |
           A=build/Zamik_artefacts/Release
+          mkdir -p dist/Zamik-Installer
+          cp dist/Zamik-Installer.pkg "installer/How to open the installer.txt" dist/Zamik-Installer/
+          (cd dist && ditto -c -k --keepParent Zamik-Installer Zamik-Installer-macOS.zip)
           mkdir -p dist/Zamik
           cp -R "$A/AU/Zamik.component" "$A/VST3/Zamik.vst3" "$A/Standalone/Zamik.app" dist/Zamik/
           cp INSTALL.txt dist/Zamik/
@@ -84,14 +150,21 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: Zamik-Installer-macOS
+          path: dist/Zamik-Installer-macOS.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
           name: Zamik-macOS
           path: dist/Zamik-macOS.zip
 
-      - name: Attach the zip to the release
+      - name: Attach the zips to the release
         if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Zamik-macOS.zip
+          files: |
+            dist/Zamik-Installer-macOS.zip
+            dist/Zamik-macOS.zip
 
   windows:
     runs-on: windows-latest

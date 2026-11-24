@@ -1,0 +1,31 @@
+ZAMIK - how to open the installer
+
+Zamik is a free gift and is not signed with a paid Apple developer certificate.
+The first time you open the installer, macOS warns that it comes from an unidentified
+developer. That happens only once, and only for the installer. The plugins it installs
+work straight away, with no Terminal commands.
+
+macOS 15 Sequoia and newer
+  1. Double-click Zamik-Installer.pkg. When macOS warns you, click Done.
+  2. Open System Settings > Privacy & Security.
+  3. Scroll down to Security. Next to the message about Zamik-Installer.pkg,
+     click Open Anyway, then enter your password.
+  4. The installer opens. Click Continue through the steps and Install.
+
+macOS 10.13 High Sierra to macOS 14 Sonoma
+  1. Right-click (or Control-click) Zamik-Installer.pkg and choose Open.
+  2. Click Open in the warning.
+  3. Click Continue through the steps and Install.
+
+After installing, restart your music software.
+  - Logic Pro: Audio Units > Zamik Audio > Zamik.
+    If it is missing: Settings > Plug-in Manager, select Zamik, Reset & Rescan Selection.
+  - REAPER, Ableton Live, Cubase, Bitwig, Studio One: use the VST3 version; rescan if needed.
+
+The installer puts the plugins here (all users on this Mac):
+  /Library/Audio/Plug-Ins/Components/Zamik.component
+  /Library/Audio/Plug-Ins/VST3/Zamik.vst3
+
+To uninstall, delete those two files.
+
+Works on macOS 10.13 High Sierra and later, on Intel and Apple silicon Macs.
